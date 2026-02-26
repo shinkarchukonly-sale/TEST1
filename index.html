@@ -2558,7 +2558,11 @@
             });
             if (!res.ok) {
                 const err = await res.text();
-                throw new Error(err);
+                let parsed;
+                try { parsed = JSON.parse(err); } catch(e) { parsed = null; }
+                const msg = parsed ? (parsed.message || parsed.error || err) : err;
+                const code = parsed ? (parsed.code || '') : '';
+                throw new Error(`[${res.status}] ${code ? code + ': ' : ''}${msg}`);
             }
             const text = await res.text();
             return text ? JSON.parse(text) : null;
@@ -2611,7 +2615,7 @@
                 updateProjectsCount();
             } catch(e) {
                 console.error('loadProjects error:', e);
-                showError('Не удалось загрузить проекты. Проверьте подключение.');
+                showError('Не удалось загрузить проекты.', e.message);
             } finally {
                 showProjectsLoading(false);
             }
@@ -2646,7 +2650,7 @@
                     setSaveBtn('saved');
                 } catch(e) {
                     console.error('saveProject error:', e);
-                    showError('Ошибка сохранения. Попробуйте ещё раз.');
+                    showError('Ошибка сохранения.', e.message);
                     setSaveBtn('idle');
                 } finally {
                     isSaving = false;
@@ -2670,7 +2674,7 @@
                     setSaveBtn('saved');
                 } catch(e) {
                     console.error('saveProject error:', e);
-                    showError('Ошибка сохранения.');
+                    showError('Ошибка сохранения.', e.message);
                     setSaveBtn('idle');
                 } finally {
                     isSaving = false;
@@ -2717,7 +2721,7 @@
                 updateCurrentProjectLabel();
             } catch(e) {
                 console.error('createNewProject error:', e);
-                showError('Ошибка создания проекта.');
+                showError('Ошибка создания проекта.', e.message);
             } finally {
                 isSaving = false;
             }
@@ -2769,7 +2773,7 @@
                 updateProjectsCount();
                 renderProjectsList();
             } catch(e) {
-                showError('Ошибка дублирования.');
+                showError('Ошибка дублирования.', e.message);
             }
         }
 
@@ -2787,7 +2791,7 @@
                 updateProjectsCount();
                 renderProjectsList();
             } catch(e) {
-                showError('Ошибка удаления.');
+                showError('Ошибка удаления.', e.message);
             }
         }
 
@@ -2880,12 +2884,13 @@
             el.style.display = show ? 'block' : 'none';
         }
 
-        function showError(msg) {
+        function showError(msg, detail) {
             const el = document.createElement('div');
-            el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#FEE2E2;color:#DC2626;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:500;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.1);';
-            el.textContent = '⚠️ ' + msg;
+            el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#FEE2E2;color:#DC2626;padding:16px 20px;border-radius:8px;font-size:14px;font-weight:500;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);max-width:420px;cursor:pointer;';
+            el.innerHTML = '⚠️ ' + msg + (detail ? '<div style="margin-top:6px;font-size:12px;font-weight:400;opacity:0.85;word-break:break-all;">' + detail + '</div>' : '');
+            el.onclick = () => el.remove();
             document.body.appendChild(el);
-            setTimeout(() => el.remove(), 4000);
+            setTimeout(() => el.remove(), 10000);
         }
 
         function showSuccess(msg) {
